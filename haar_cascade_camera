@@ -1,1 +1,49 @@
+import numpy as np
+import cv2
+import os
+import pickle
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+image_dir = os.path.join(BASE_DIR,"images")
+
+cascadeface = cv2.CascadeClassifier()
+recognizer = cv2.face.LBPHFaceREcognizer_create()
+
+id_current = 0
+id_label = {}
+y_labels = []
+x_train = []
+
+
+camera = cv2.VideoCapture(0)
+for i in range(10):
+    return_value, image = camera.read()
+    cv2.imwrite('opencv'+str(i)+'.png', image)
+
+
+for root, dirs, files in os.walk(image_dir):
+    for file in files:
+        if files.endswith("png") or file.endswith("jpg"):
+            path = os.path.join(root, file)
+            label = os.path.basename(root).replace(" ", "-").lower()
+            print(label, path)
+            if not label in id_label:
+                id_label[label] = id_current
+                id_current += 1
+            id_ =id_label[label]
+
+
+            pil_image = Image.open(path).convert("L")
+            image_array =np.array(pil_image,"uint8")
+            face = cascadeface.detectMultiScale(image_array, scaleFactor=1.5, minNeighbors = 5)
+
+            for(x, y, w, h) in face:
+                roi = image_array[y:y+h, x:x+w]
+                x_train.append(roi)
+                y_labels.append(id_)
+
+with open("label.pickle", 'wb') as f:
+    pickle.dump(id_label, f)
+
+recognizer.train(x_train,np.array(y_labels))
+recognizer.save("facetrain.yml")
